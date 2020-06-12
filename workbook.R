@@ -6,6 +6,10 @@ library(tidyverse)
 
 library(janitor)
 
+library(tidymodels)
+
+library(skimr)
+
 df <- read_csv("./data/upwork_data_0.csv") %>% 
   filter(!is.na(over_50k))
 
@@ -21,13 +25,6 @@ df %>%
         adorn_percentages() %>% 
         adorn_pct_formatting() %>% 
         adorn_ns())
-
-
-
-
-
-
-
 
 
 df_cleaned <- df %>% 
@@ -56,9 +53,11 @@ df_cleaned <- df %>%
            TRUE ~ "Others"
          ),
          race = str_replace_all(race, " ", "")) %>% 
-  select(-starts_with("capital"), -education)
+  select(-starts_with("capital"), -education) %>% 
+  distinct(id, .keep_all = T) 
 
 
+skim(df_cleaned)
 
 
 
@@ -69,87 +68,214 @@ df_cleaned %>%
 
 
 
+# 
+# 
+# glimpse(df)
+# 
+# df %>% 
+#   ggplot(aes(x = over_50k, y = age)) +
+#   geom_boxplot()
+# 
+# 
+# 
+# df %>% 
+#   ggplot(aes(x = over_50k, y = education_num)) +
+#   geom_boxplot()
+# 
+# 
+# 
+# 
+# 
+# df %>% 
+#   ggplot(aes(fill = over_50k, x = workclass)) +
+#   geom_bar(position = "dodge")+
+#   # or:
+#   # geom_bar(position = position_fill(), stat = "identity") 
+#   #scale_y_continuous(labels = scales::percent_format()) +
+#   theme_classic()
+# 
+# 
+# df %>% 
+#   ggplot(aes(x = education_num)) +
+#   geom_histogram()
+# 
+# df %>% 
+#   filter(abs(capital_gain) < 5000) %>% 
+#   ggplot(aes(x = capital_gain)) +
+#   geom_histogram()
+# 
+# 
+# df %>% 
+#   filter(abs(capital_loss) < 5000) %>% 
+#   ggplot(aes(x = capital_loss)) +
+#   geom_histogram()
+# 
+# 
+# summary(df %>% select_if(is.numeric))
+# 
+# 
+# 
+# df %>% 
+#   select_if(is.character) %>% 
+#   lapply(X = ., FUN = function(x) table(x))
+# 
+# 
+# df %>% 
+#   select_if(is.numeric) %>% 
+#   lapply(X = ., FUN = function(x) sum(is.na(x)))
+# 
+# 
+# 
+# df %>% 
+#   ggplot(aes(x = hours_per_week)) +
+#   geom_histogram()
+# 
+# 
+# df %>% 
+#   ggplot(aes(x = over_50k, y = hours_per_week)) +
+#   geom_violin()
+# 
+# 
+# df %>% 
+#   select_if(is.character) %>% 
+#   map(.x = names(select(., -over_50k)), .f = ~tabyl(df, !!sym(.x), over_50k) %>%  adorn_percentages() %>% adorn_pct_formatting() %>% adorn_ns())
+# 
+# 
+# 
+# 
+# 
+# df %>% 
+#   select_if(is.character) %>% 
+#   ggplot(aes(fill = over_50k, x = workclass)) +
+#   geom_bar(position = "fill")+
+#   scale_y_continuous(labels = scales::percent_format()) +
+#   theme_classic()
+# 
 
 
-glimpse(df)
 
-df %>% 
-  ggplot(aes(x = over_50k, y = age)) +
-  geom_boxplot()
-
-
-
-df %>% 
-  ggplot(aes(x = over_50k, y = education_num)) +
-  geom_boxplot()
+###########################################
+# # # # # # # # # # # # # # # # # # # # # #
+############ Modeling Begin Here ##########
+# # # # # # # # # # # # # # # # # # # # # #
+###########################################
 
 
+set.seed(seed = 2020) 
+
+
+# Splitting dataset in training and test set
+
+train_test_split <-
+  rsample::initial_split(
+    data = df_cleaned,
+    strata = over_50k,
+    prop = 0.80   
+  ) 
+
+
+train_test_split
+
+
+trees_train <- train_test_split %>% training() 
+
+trees_test  <- train_test_split %>% testing()
+
+
+# Function to Transforming variables for modeling
+
+
+tree_rec <- recipe(over_50k ~ ., data = trees_train) %>%
+  update_role(id, new_role = "ID") %>%
+  step_center(all_numeric()) %>%
+  step_scale(all_numeric()) %>%
+  step_string2factor(all_nominal(), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes()) %>%
+  step_knnimpute(all_predictors(), neighbors = 3)
+
+
+# Prepping data
+
+tree_prep <- prep(tree_rec)
+
+# Juice the recipe
+
+# train_baked <- bake(tree_rec, new_data = train_tbl)
+# 
+# test_baked  <- bake(tree_rec, new_data = test_tbl)
+
+
+# Function for cross validation and tuning
+
+
+# rf_fun <- function(split, id, try, tree) {
+#   
+#   analysis_set <- split %>% analysis()
+#   analysis_prepped <- analysis_set %>% recipe_simple()
+#   analysis_baked <- analysis_prepped %>% bake(new_data = analysis_set)  
+#   model_rf <- rand_forest(
+#       mode = "classification",
+#       mtry = try,
+#       trees = tree
+#     ) %>%
+#     set_engine("ranger",
+#                importance = "impurity"
+#     ) %>%
+#     fit(over_50k ~ ., data = analysis_baked)  
+#   
+#   assessment_set <- split %>% assessment()
+#   assessment_prepped <- assessment_set %>% recipe_simple()
+#   assessment_baked <- assessment_prepped %>% bake(new_data = assessment_set)  
+#   
+#   tibble(
+#     "id" = id,
+#     "truth" = assessment_baked$over_50k,
+#     "prediction" = model_rf %>% predict(new_data = assessment_baked) %>% unlist()
+#   )
+#   
+# }
+# 
+# 
+# # Performance assessment
+# 
+# pred_rf <- map2_df(
+#   .x = cross_val_tbl$splits,
+#   .y = cross_val_tbl$id,
+#   ~ rf_fun(split = .x, id = .y, try = 3, tree = 200)
+# )
+# 
+
+
+# model specification for a random forest
+
+tune_spec <- rand_forest(
+  mtry = tune(),
+  trees = 200,
+  min_n = tune()) %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+
+# put these together in a workflow(), 
+
+tune_wf <- workflow() %>%
+  add_recipe(tree_rec) %>%
+  add_model(tune_spec)
 
 
 
-df %>% 
-  ggplot(aes(fill = over_50k, x = workclass)) +
-  geom_bar(position = "dodge")+
-  # or:
-  # geom_bar(position = position_fill(), stat = "identity") 
-  #scale_y_continuous(labels = scales::percent_format()) +
-  theme_classic()
-
-
-df %>% 
-  ggplot(aes(x = education_num)) +
-  geom_histogram()
-
-df %>% 
-  filter(abs(capital_gain) < 5000) %>% 
-  ggplot(aes(x = capital_gain)) +
-  geom_histogram()
-
-
-df %>% 
-  filter(abs(capital_loss) < 5000) %>% 
-  ggplot(aes(x = capital_loss)) +
-  geom_histogram()
-
-
-summary(df %>% select_if(is.numeric))
 
 
 
-df %>% 
-  select_if(is.character) %>% 
-  lapply(X = ., FUN = function(x) table(x))
+# Setting up cross validation 
 
+trees_folds <- vfold_cv(trees_train, v = 10)
 
-df %>% 
-  select_if(is.numeric) %>% 
-  lapply(X = ., FUN = function(x) sum(is.na(x)))
+doParallel::registerDoParallel()
 
+tune_res <- tune_grid(
+  tune_wf,
+  resamples = trees_folds,
+  grid = 20
+)
 
-
-df %>% 
-  ggplot(aes(x = hours_per_week)) +
-  geom_histogram()
-
-
-df %>% 
-  ggplot(aes(x = over_50k, y = hours_per_week)) +
-  geom_violin()
-
-
-df %>% 
-  select_if(is.character) %>% 
-  map(.x = names(select(., -over_50k)), .f = ~tabyl(df, !!sym(.x), over_50k) %>%  adorn_percentages() %>% adorn_pct_formatting() %>% adorn_ns())
-
-
-
-
-
-df %>% 
-  select_if(is.character) %>% 
-  ggplot(aes(fill = over_50k, x = workclass)) +
-  geom_bar(position = "fill")+
-  scale_y_continuous(labels = scales::percent_format()) +
-  theme_classic()
-
-
+tune_res

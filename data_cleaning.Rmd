@@ -110,7 +110,11 @@ df_cleaned <- df %>%
            TRUE ~ "Others"
          ),
          race = str_replace_all(race, " ", "")) %>% 
-  select(-starts_with("capital"), -education) # Removing variable education, capital_gain and capital loss
+  select(-starts_with("capital"), -education) %>% # Removing variable education, capital_gain and capital loss
+  distinct(id, .keep_all = T) # Removing all duplicates using the ID
+  
+
+
 
 
 ```
@@ -131,7 +135,6 @@ summary(df_cleaned %>% select_if(is.numeric)) %>% kable()
 
 
 
-
 ```{r}
 
 df_cleaned %>% 
@@ -146,4 +149,4 @@ df_cleaned %>%
 ```
 
 
-The data looks good. It's ready for training model using Random Forest.
+The data looks good. New data contains `r nrow(df_cleaned)` rows. It's ready for training model using Random Forest.
