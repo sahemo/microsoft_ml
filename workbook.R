@@ -275,7 +275,21 @@ doParallel::registerDoParallel()
 tune_res <- tune_grid(
   tune_wf,
   resamples = trees_folds,
-  grid = 20
+  grid = 5
 )
 
 tune_res
+
+tune_res %>%
+  collect_metrics() %>%
+  filter(.metric == "roc_auc") %>%
+  select(mean, min_n, mtry) %>%
+  pivot_longer(min_n:mtry,
+               values_to = "value",
+               names_to = "parameter"
+  ) %>%
+  ggplot(aes(value, mean, color = parameter)) +
+  geom_point(show.legend = FALSE) +
+  facet_wrap(~parameter, scales = "free_x") +
+  labs(x = NULL, y = "AUC")
+
