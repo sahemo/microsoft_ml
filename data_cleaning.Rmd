@@ -1,0 +1,149 @@
+---
+title: "Data Cleaning and Preprocessing"
+author: "Sabbir Ahmed Hemo"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE, results = "asis")
+```
+
+## Loading libraries
+
+
+```{r}
+
+library(tidyverse)
+library(janitor)
+library(knitr)
+
+```
+
+## Loading datasets
+
+
+```{r, results='markup'}
+
+df <- read_csv("./data/upwork_data_0.csv") %>% 
+  filter(!is.na(over_50k))
+
+glimpse(df)
+
+```
+
+\newpage
+
+## Summary table for numeric variables
+
+```{r}
+
+summary(df %>% select_if(is.numeric)) %>% kable()
+
+```
+
+
+## Cross tabs of categorical variables with dependent variable _over_50K_
+
+```{r}
+
+
+
+
+df %>% 
+  select_if(is.character) %>% 
+  map(.x = names(select(., -over_50k)), .f = ~tabyl(df, !!sym(.x), over_50k) %>%  
+        adorn_percentages() %>% 
+        adorn_pct_formatting() %>% 
+        adorn_ns() %>% 
+        kable())
+
+
+
+```
+
+
+
+## Cleaning and recoding variables
+
+```{r}
+
+
+
+df_cleaned <- df %>% 
+  mutate(hours_per_week = replace(
+    x = hours_per_week, 
+    list = hours_per_week > 100,
+    values = NA), # removing outliers
+         age = replace(x = age, 
+                       list = age < 18, 
+                       values = NA), # removing outliers
+         relationship = case_when(
+           relationship %in% c("Husband", "Wife") ~ "with spouse",
+           relationship %in% c("Not-in-family", "Unmarried") ~ relationship,
+           TRUE ~ "Without spouse" # Recoding into 4 category
+         ),
+         occupation = case_when(
+           occupation %in% c('?', 'Armed-Forces', 'Farming-fishing', 
+                             'Handlers-cleaners', 'Other-service', 
+                             'Priv-house-serv') ~ 'Low Salary Jobs', # Recoding low salary jobs together
+           TRUE ~ occupation
+         ),
+         marital_status = case_when(
+           marital_status %in% c("Married-civ-spouse", 
+                                 "Divorced", "Never-married") ~ marital_status,
+           marital_status %in% c("Separated", 
+                                 "Widowed") ~ "Sep or widowed", # Recoding separted and widowed into single category
+           TRUE ~ "Others"
+         ),
+         workclass = case_when(
+           workclass %in% c("?", "Never-worked", 
+                            "Without-pay") ~ "Others",
+           TRUE ~ workclass
+         ),
+         native_country = case_when(
+           native_country %in% c("Canada", "China", 
+                                 "Cuba", "India", "Philippines", "United-States") ~ native_country,
+           TRUE ~ "Others"
+         ),
+         race = str_replace_all(race, " ", "")) %>% 
+  select(-starts_with("capital"), -education) # Removing variable education, capital_gain and capital loss
+
+
+```
+
+
+
+
+## Summary table for numeric variables after cleaning
+
+```{r}
+
+summary(df_cleaned %>% select_if(is.numeric)) %>% kable() 
+
+```
+
+
+## Cross tabs of categorical variables with dependent variable _over_50K_ after cleaning
+
+
+
+
+```{r}
+
+df_cleaned %>% 
+  select_if(is.character) %>% 
+  map(.x = names(select(., -over_50k)), 
+      .f = ~tabyl(df_cleaned, !!sym(.x), over_50k) %>%  
+        adorn_percentages() %>% 
+        adorn_pct_formatting() %>% 
+        adorn_ns() %>% 
+        kable())
+
+```
+
+
+The data looks good. It's ready for training model using Random Forest.
