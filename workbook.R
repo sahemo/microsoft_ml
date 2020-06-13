@@ -10,6 +10,10 @@ library(tidymodels)
 
 library(skimr)
 
+
+library(vip)
+
+
 df <- read_csv("./data/upwork_data_0.csv") %>% 
   filter(!is.na(over_50k))
 
@@ -270,12 +274,18 @@ tune_wf <- workflow() %>%
 
 trees_folds <- vfold_cv(trees_train, v = 10)
 
-doParallel::registerDoParallel()
+all_cores <- parallel::detectCores(logical = FALSE)
+
+library(doParallel)
+
+cl <- makePSOCKcluster(all_cores-1)
+
+doParallel::registerDoParallel(cl)
 
 tune_res <- tune_grid(
   tune_wf,
   resamples = trees_folds,
-  grid = 5
+  grid = 20
 )
 
 tune_res
@@ -293,3 +303,97 @@ tune_res %>%
   facet_wrap(~parameter, scales = "free_x") +
   labs(x = NULL, y = "AUC")
 
+
+
+
+# Regular grid search
+
+rf_grid <- grid_regular(
+  mtry(range = c(6, 15)),
+  min_n(range = c(30, 45)),
+  levels = 5
+)
+
+rf_grid
+
+tail(rf_grid)
+
+
+
+regular_res <- tune_grid(
+  tune_wf,
+  resamples = trees_folds,
+  grid = rf_grid
+)
+
+regular_res
+
+
+regular_res %>%
+  collect_metrics() %>%
+  filter(.metric == "roc_auc") %>%
+  mutate(min_n = factor(min_n)) %>%
+  ggplot(aes(mtry, mean, color = min_n)) +
+  geom_line(alpha = 0.5, size = 1.5) +
+  geom_point() +
+  labs(y = "AUC")
+
+
+
+
+# Choosing best model
+
+
+best_auc <- select_best(regular_res, "roc_auc")
+
+final_rf <- finalize_model(
+  tune_spec,
+  best_auc
+)
+
+final_rf
+
+
+# Variable importance plot
+
+
+tree_fit <- final_rf %>%
+  set_engine("ranger", importance = "permutation") %>%
+  fit(over_50k ~ .,
+      data = juice(tree_prep) %>% select(-id)
+  )
+
+
+final_rf %>%
+  set_engine("ranger", importance = "permutation") %>%
+  fit(over_50k ~ .,
+      data = juice(tree_prep) %>% select(-id)
+  ) %>%
+  vip(geom = "point", num_features = 20)
+
+
+final_wf <- workflow() %>%
+  add_recipe(tree_rec) %>%
+  add_model(final_rf)
+
+final_res <- final_wf %>%
+  last_fit(train_test_split)
+
+final_res %>%
+  collect_metrics()
+
+
+write_csv(df_cleaned, "dataset-cleaned-final.csv")
+
+prediction_df <- df_cleaned %>% 
+  mutate(prediction = tree_fit %>% predict(new_data = bake(object = tree_prep, new_data = df_cleaned)) %>% unlist()) %>% 
+  select(id, prediction, over_50k)
+
+head(prediction_df)
+
+tabyl(prediction_df, prediction, over_50k)
+
+
+prediction_df %>% 
+  select(-over_50k) %>% 
+  write_csv("prediction-dataset.csv")

@@ -1,0 +1,389 @@
+---
+title: "Model Specification and Hyper Parameter Tuning"
+author: "Sabbir Ahmed Hemo"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE, results = "asis")
+```
+
+## Loading libraries
+
+
+```{r}
+
+library(tidyverse)
+library(janitor)
+library(knitr)
+library(tidymodels)
+library(skimr)
+library(vip)
+library(doParallel)
+
+```
+
+## Loading datasets
+
+
+```{r, results='markup'}
+
+filename_to_data <- list.files(path = "./", pattern = "0.csv")
+
+df <- read_csv(file = filename_to_data) %>% 
+  filter(!is.na(over_50k))
+
+glimpse(df)
+
+```
+
+\newpage
+
+## Summary table for numeric variables
+
+```{r}
+
+summary(df %>% select_if(is.numeric)) %>% kable()
+
+```
+
+
+## Cross tabs of categorical variables with dependent variable _over_50K_
+
+```{r, results='hide'}
+
+
+
+
+df %>% 
+  select_if(is.character) %>% 
+  map(.x = names(select(., -over_50k)), .f = ~tabyl(df, !!sym(.x), over_50k) %>%  
+        adorn_percentages() %>% 
+        adorn_pct_formatting() %>% 
+        adorn_ns() %>% 
+        kable())
+
+
+
+```
+
+
+
+## Cleaning and recoding variables
+
+```{r}
+
+
+
+df_cleaned <- df %>% 
+  mutate(hours_per_week = replace(
+    x = hours_per_week, 
+    list = hours_per_week > 100,
+    values = NA), # removing outliers
+         age = replace(x = age, 
+                       list = age < 18, 
+                       values = NA), # removing outliers
+         relationship = case_when(
+           relationship %in% c("Husband", "Wife") ~ "with spouse",
+           relationship %in% c("Not-in-family", "Unmarried") ~ relationship,
+           TRUE ~ "Without spouse" # Recoding into 4 category
+         ),
+         occupation = case_when(
+           occupation %in% c('?', 'Armed-Forces', 'Farming-fishing', 
+                             'Handlers-cleaners', 'Other-service', 
+                             'Priv-house-serv') ~ 'Low Salary Jobs', # Recoding low salary jobs together
+           TRUE ~ occupation
+         ),
+         marital_status = case_when(
+           marital_status %in% c("Married-civ-spouse", 
+                                 "Divorced", "Never-married") ~ marital_status,
+           marital_status %in% c("Separated", 
+                                 "Widowed") ~ "Sep or widowed", # Recoding separted and widowed into single category
+           TRUE ~ "Others"
+         ),
+         workclass = case_when(
+           workclass %in% c("?", "Never-worked", 
+                            "Without-pay") ~ "Others",
+           TRUE ~ workclass
+         ),
+         native_country = case_when(
+           native_country %in% c("Canada", "China", 
+                                 "Cuba", "India", "Philippines", "United-States") ~ native_country,
+           TRUE ~ "Others"
+         ),
+         race = str_replace_all(race, " ", "")) %>% 
+  select(-starts_with("capital"), -education) %>% # Removing variable education, capital_gain and capital loss
+  distinct(id, .keep_all = T) # Removing all duplicates using the ID
+  
+
+
+
+
+```
+
+
+
+
+## Summary table for numeric variables after cleaning
+
+```{r}
+
+summary(df_cleaned %>% select_if(is.numeric)) %>% kable() 
+
+```
+
+
+## Cross tabs of categorical variables with dependent variable _over_50K_ after cleaning
+
+
+
+```{r, results='hide'}
+
+df_cleaned %>% 
+  select_if(is.character) %>% 
+  map(.x = names(select(., -over_50k)), 
+      .f = ~tabyl(df_cleaned, !!sym(.x), over_50k) %>%  
+        adorn_percentages() %>% 
+        adorn_pct_formatting() %>% 
+        adorn_ns() %>% 
+        kable())
+
+
+
+write_csv(df_cleaned, "dataset-cleaned-final.csv")
+
+```
+
+
+The data looks good. New data contains `r nrow(df_cleaned)` rows. It's ready for training model using Random Forest.
+
+
+# Model Specification 
+
+```{r, eval=TRUE}
+
+
+set.seed(seed = 2020) 
+
+
+# Splitting dataset in training and test set
+
+train_test_split <-
+  rsample::initial_split(
+    data = df_cleaned,
+    strata = over_50k,
+    prop = 0.80   
+  ) 
+
+
+train_test_split
+
+trees_train <- train_test_split %>% training() 
+
+trees_test  <- train_test_split %>% testing()
+
+
+
+
+# Function to Transforming variables for modeling
+
+tree_rec <- recipe(over_50k ~ ., data = trees_train) %>%
+  update_role(id, new_role = "ID") %>%
+  step_center(all_numeric()) %>%
+  step_scale(all_numeric()) %>%
+  step_string2factor(all_nominal(), -all_outcomes()) %>%
+  step_dummy(all_nominal(), -all_outcomes()) %>%
+  step_knnimpute(all_predictors(), neighbors = 3)
+
+
+# Prepping data
+
+tree_prep <- prep(tree_rec)
+
+```
+
+
+# Hyperparameter Tuning
+
+
+```{r, eval=TRUE}
+
+
+
+# model tuning for a random forest
+
+tune_spec <- rand_forest(
+  mtry = tune(),
+  trees = 200,
+  min_n = tune()) %>%
+  set_mode("classification") %>%
+  set_engine("ranger")
+
+# put these together in a workflow(), 
+
+tune_wf <- workflow() %>%
+  add_recipe(tree_rec) %>%
+  add_model(tune_spec)
+
+
+
+
+
+
+# Setting up cross validation 
+
+trees_folds <- vfold_cv(trees_train, v = 10)
+
+
+# Setting up parallel computing using 20 cores
+
+all_cores <- parallel::detectCores(logical = FALSE)
+
+library(doParallel)
+
+cl <- makePSOCKcluster(all_cores-1)
+
+doParallel::registerDoParallel(cl)
+
+
+
+# Tuning over set of hyper parameter value 
+# for finding the range of hyper parameter
+
+tune_res <- tune_grid(
+  tune_wf,
+  resamples = trees_folds,
+  grid = 20
+)
+
+#tune_res
+
+
+# Plotting model accuracy metric AUC of ROC
+
+tune_res %>%
+  collect_metrics() %>%
+  filter(.metric == "roc_auc") %>%
+  select(mean, min_n, mtry) %>%
+  pivot_longer(min_n:mtry,
+               values_to = "value",
+               names_to = "parameter"
+  ) %>%
+  ggplot(aes(value, mean, color = parameter)) +
+  geom_point(show.legend = FALSE) +
+  facet_wrap(~parameter, scales = "free_x") +
+  labs(x = NULL, y = "AUC")
+
+
+
+
+# Regular grid search from previous plot
+
+rf_grid <- grid_regular(
+  mtry(range = c(6, 15)),
+  min_n(range = c(30, 45)),
+  levels = 5
+)
+
+rf_grid
+
+#tail(rf_grid)
+
+
+# Tuning over regular grid of hyper parameter value 
+# for finding the best model
+
+
+
+regular_res <- tune_grid(
+  tune_wf,
+  resamples = trees_folds,
+  grid = rf_grid
+)
+
+#regular_res
+
+# Plotting the accuracy matrix for combination of tuning parameter
+
+regular_res %>%
+  collect_metrics() %>%
+  filter(.metric == "roc_auc") %>%
+  mutate(min_n = factor(min_n)) %>%
+  ggplot(aes(mtry, mean, color = min_n)) +
+  geom_line(alpha = 0.5, size = 1.5) +
+  geom_point() +
+  labs(y = "AUC")
+
+
+
+
+# Choosing best model
+
+
+best_auc <- select_best(regular_res, "roc_auc")
+
+final_rf <- finalize_model(
+  tune_spec,
+  best_auc
+)
+
+final_rf
+
+
+# Variable importance plot
+
+
+tree_fit <- final_rf %>%
+  set_engine("ranger", importance = "permutation") %>%
+  fit(over_50k ~ .,
+      data = juice(tree_prep) %>% select(-id)
+  )
+
+
+# Creating variable importance plot of top 10 feature
+
+tree_fit %>%
+  vip(geom = "point", num_features = 10)
+
+
+final_wf <- workflow() %>%
+  add_recipe(tree_rec) %>%
+  add_model(final_rf)
+
+final_res <- final_wf %>%
+  last_fit(train_test_split)
+
+
+# Final accuracy from validation set
+
+final_res %>%
+  collect_metrics()
+
+
+# Prediction on full data using the trained model
+
+prediction_df <- df_cleaned %>% 
+  mutate(prediction = tree_fit %>% predict(new_data = bake(object = tree_prep, new_data = df_cleaned)) %>% unlist()) %>% 
+  select(id, prediction, over_50k)
+
+head(prediction_df)
+
+# Confusion matrix on full data
+
+tabyl(prediction_df, prediction, over_50k)
+
+
+# Saving the predictions
+
+prediction_df %>% 
+  select(-over_50k) %>% 
+  write_csv("prediction-dataset.csv")
+
+
+```
+
+
