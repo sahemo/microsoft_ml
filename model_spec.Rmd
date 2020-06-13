@@ -3,9 +3,9 @@ title: "Model Specification and Hyper Parameter Tuning"
 author: "Sabbir Ahmed Hemo"
 date: '`r format(Sys.Date(), "%B %d, %Y")`'
 output:
-  pdf_document: default
   html_document:
     df_print: paged
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -153,6 +153,11 @@ df_cleaned %>%
         kable())
 
 
+```
+
+
+```{r, eval=FALSE}
+
 
 write_csv(df_cleaned, "dataset-cleaned-final.csv")
 
@@ -239,6 +244,13 @@ tune_wf <- workflow() %>%
 trees_folds <- vfold_cv(trees_train, v = 10)
 
 
+```
+
+# Setup parallel computing
+
+
+```{r}
+
 # Setting up parallel computing using 20 cores
 
 all_cores <- parallel::detectCores(logical = FALSE)
@@ -279,7 +291,12 @@ tune_res %>%
   labs(x = NULL, y = "AUC")
 
 
+```
 
+
+# Tuning from regular grid
+
+```{r}
 
 # Regular grid search from previous plot
 
@@ -319,7 +336,12 @@ regular_res %>%
   labs(y = "AUC")
 
 
+```
 
+# Selecting the best model
+
+
+```{r}
 
 # Choosing best model
 
@@ -331,7 +353,7 @@ final_rf <- finalize_model(
   best_auc
 )
 
-final_rf
+
 
 
 # Variable importance plot
@@ -374,7 +396,15 @@ head(prediction_df)
 
 # Confusion matrix on full data
 
-tabyl(prediction_df, prediction, over_50k)
+#tabyl(prediction_df, prediction, over_50k)
+
+```
+
+
+# Saving the prediction dataset
+
+
+```{r, eval=FALSE}
 
 
 # Saving the predictions
@@ -387,3 +417,4 @@ prediction_df %>%
 ```
 
 
+End of analysis

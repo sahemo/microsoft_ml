@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.20 (TeX Live 2019) (preloaded format=pdflatex 2020.1.21)  13 JUN 2020 09:04
+This is pdfTeX, Version 3.14159265-2.6-1.40.20 (TeX Live 2019) (preloaded format=pdflatex 2020.1.21)  13 JUN 2020 09:55
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -661,42 +661,34 @@ File: ts1lmtt.fd 2009/10/30 v1.6 Font defs for Latin Modern
 Package longtable Warning: Column widths have changed
 (longtable)                in table 2 on input line 290.
 
-[3] [4]
-Underfull \vbox (badness 10000) detected at line 436
- []
-
-
-Underfull \vbox (badness 10000) detected at line 436
- []
-
-[5]
-<model_spec_files/figure-latex/unnamed-chunk-9-1.pdf, id=54, 469.755pt x 325.21
-5pt>
-File: model_spec_files/figure-latex/unnamed-chunk-9-1.pdf Graphic file (type pd
-f)
-<use model_spec_files/figure-latex/unnamed-chunk-9-1.pdf>
-Package pdftex.def Info: model_spec_files/figure-latex/unnamed-chunk-9-1.pdf  u
-sed on input line 438.
+[3] [4] [5]
+<model_spec_files/figure-latex/unnamed-chunk-11-1.pdf, id=56, 469.755pt x 325.2
+15pt>
+File: model_spec_files/figure-latex/unnamed-chunk-11-1.pdf Graphic file (type p
+df)
+<use model_spec_files/figure-latex/unnamed-chunk-11-1.pdf>
+Package pdftex.def Info: model_spec_files/figure-latex/unnamed-chunk-11-1.pdf  
+used on input line 440.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[6 <./model_spec_files/figure-latex/unnamed-chunk-9-1.pdf>]
-<model_spec_files/figure-latex/unnamed-chunk-9-2.pdf, id=66, 469.755pt x 325.21
-5pt>
-File: model_spec_files/figure-latex/unnamed-chunk-9-2.pdf Graphic file (type pd
-f)
-<use model_spec_files/figure-latex/unnamed-chunk-9-2.pdf>
-Package pdftex.def Info: model_spec_files/figure-latex/unnamed-chunk-9-2.pdf  u
-sed on input line 495.
+[6 <./model_spec_files/figure-latex/unnamed-chunk-11-1.pdf>]
+<model_spec_files/figure-latex/unnamed-chunk-12-1.pdf, id=70, 469.755pt x 325.2
+15pt>
+File: model_spec_files/figure-latex/unnamed-chunk-12-1.pdf Graphic file (type p
+df)
+<use model_spec_files/figure-latex/unnamed-chunk-12-1.pdf>
+Package pdftex.def Info: model_spec_files/figure-latex/unnamed-chunk-12-1.pdf  
+used on input line 500.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[7] [8 <./model_spec_files/figure-latex/unnamed-chunk-9-2.pdf>]
-<model_spec_files/figure-latex/unnamed-chunk-9-3.pdf, id=84, 469.755pt x 325.21
-5pt>
-File: model_spec_files/figure-latex/unnamed-chunk-9-3.pdf Graphic file (type pd
-f)
-<use model_spec_files/figure-latex/unnamed-chunk-9-3.pdf>
-Package pdftex.def Info: model_spec_files/figure-latex/unnamed-chunk-9-3.pdf  u
-sed on input line 538.
+[7] [8 <./model_spec_files/figure-latex/unnamed-chunk-12-1.pdf>]
+<model_spec_files/figure-latex/unnamed-chunk-13-1.pdf, id=90, 469.755pt x 325.2
+15pt>
+File: model_spec_files/figure-latex/unnamed-chunk-13-1.pdf Graphic file (type p
+df)
+<use model_spec_files/figure-latex/unnamed-chunk-13-1.pdf>
+Package pdftex.def Info: model_spec_files/figure-latex/unnamed-chunk-13-1.pdf  
+used on input line 537.
 (pdftex.def)             Requested size: 469.75386pt x 325.2142pt.
-[9 <./model_spec_files/figure-latex/unnamed-chunk-9-3.pdf>]
+[9 <./model_spec_files/figure-latex/unnamed-chunk-13-1.pdf>]
 
 ! LaTeX Error: There's no line here to end.
 
@@ -704,11 +696,11 @@ See the LaTeX manual or LaTeX Companion for explanation.
 Type  H <return>  for immediate help.
  ...                                              
                                                   
-l.583 1
+l.582 1
         12106 \textless{}=50K \textless{}=50K\\ 
 Here is how much of TeX's memory you used:
- 11128 strings out of 494106
- 158099 string characters out of 6173964
+ 11134 strings out of 494106
+ 158222 string characters out of 6173964
  228586 words of memory out of 5000000
  15010 multiletter control sequences out of 15000+600000
  40194 words of font info for 42 fonts, out of 8000000 for 9000

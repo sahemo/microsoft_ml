@@ -304,9 +304,11 @@ cleaning}{Cross tabs of categorical variables with dependent variable over\_50K 
 \StringTok{        }\KeywordTok{adorn_pct_formatting}\NormalTok{() }\OperatorTok{%>%}\StringTok{ }
 \StringTok{        }\KeywordTok{adorn_ns}\NormalTok{() }\OperatorTok{%>%}\StringTok{ }
 \StringTok{        }\KeywordTok{kable}\NormalTok{())}
+\end{Highlighting}
+\end{Shaded}
 
-
-
+\begin{Shaded}
+\begin{Highlighting}[]
 \KeywordTok{write_csv}\NormalTok{(df_cleaned, }\StringTok{"dataset-cleaned-final.csv"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
@@ -332,14 +334,8 @@ training model using Random Forest.
 \NormalTok{  ) }
 
 
-\NormalTok{train_test_split}
-\end{Highlighting}
-\end{Shaded}
 
-\textless{}20892/5222/26114\textgreater{}
 
-\begin{Shaded}
-\begin{Highlighting}[]
 \NormalTok{trees_train <-}\StringTok{ }\NormalTok{train_test_split }\OperatorTok{%>%}\StringTok{ }\KeywordTok{training}\NormalTok{() }
 
 \NormalTok{trees_test  <-}\StringTok{ }\NormalTok{train_test_split }\OperatorTok{%>%}\StringTok{ }\KeywordTok{testing}\NormalTok{()}
@@ -392,8 +388,14 @@ training model using Random Forest.
 \CommentTok{# Setting up cross validation }
 
 \NormalTok{trees_folds <-}\StringTok{ }\KeywordTok{vfold_cv}\NormalTok{(trees_train, }\DataTypeTok{v =} \DecValTok{10}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
 
+\hypertarget{setup-parallel-computing}{%
+\section{Setup parallel computing}\label{setup-parallel-computing}}
 
+\begin{Shaded}
+\begin{Highlighting}[]
 \CommentTok{# Setting up parallel computing using 20 cores}
 
 \NormalTok{all_cores <-}\StringTok{ }\NormalTok{parallel}\OperatorTok{::}\KeywordTok{detectCores}\NormalTok{(}\DataTypeTok{logical =} \OtherTok{FALSE}\NormalTok{)}
@@ -435,7 +437,10 @@ training model using Random Forest.
 \end{Highlighting}
 \end{Shaded}
 
-\includegraphics{model_spec_files/figure-latex/unnamed-chunk-9-1.pdf}
+\includegraphics{model_spec_files/figure-latex/unnamed-chunk-11-1.pdf}
+
+\hypertarget{tuning-from-regular-grid}{%
+\section{Tuning from regular grid}\label{tuning-from-regular-grid}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -492,7 +497,10 @@ mtry min_n
 \end{Highlighting}
 \end{Shaded}
 
-\includegraphics{model_spec_files/figure-latex/unnamed-chunk-9-2.pdf}
+\includegraphics{model_spec_files/figure-latex/unnamed-chunk-12-1.pdf}
+
+\hypertarget{selecting-the-best-model}{%
+\section{Selecting the best model}\label{selecting-the-best-model}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -506,18 +514,9 @@ mtry min_n
 \NormalTok{  best_auc}
 \NormalTok{)}
 
-\NormalTok{final_rf}
-\end{Highlighting}
-\end{Shaded}
 
-Random Forest Model Specification (classification)
 
-Main Arguments: mtry = 8 trees = 200 min\_n = 37
 
-Computational engine: ranger
-
-\begin{Shaded}
-\begin{Highlighting}[]
 \CommentTok{# Variable importance plot}
 
 
@@ -535,7 +534,7 @@ Computational engine: ranger
 \end{Highlighting}
 \end{Shaded}
 
-\includegraphics{model_spec_files/figure-latex/unnamed-chunk-9-3.pdf}
+\includegraphics{model_spec_files/figure-latex/unnamed-chunk-13-1.pdf}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -557,7 +556,7 @@ Computational engine: ranger
 \hypertarget{a-tibble-2-x-3}{%
 \section{A tibble: 2 x 3}\label{a-tibble-2-x-3}}
 
-.metric .estimator .estimate 1 accuracy binary 0.868 2 roc\_auc binary
+.metric .estimator .estimate 1 accuracy binary 0.870 2 roc\_auc binary
 0.884
 
 \begin{Shaded}
@@ -582,7 +581,7 @@ Computational engine: ranger
 \\
 1 12106 \textless{}=50K \textless{}=50K\\
 2 28951 \textless{}=50K \textless{}=50K\\
-3 24570 \textgreater{}50K \textgreater{}50K\\
+3 24570 \textless{}=50K \textgreater{}50K\\
 4 16358 \textless{}=50K \textless{}=50K\\
 5 9375 \textless{}=50K \textless{}=50K\\
 6 10738 \textgreater{}50K \textgreater{}50K
@@ -591,12 +590,13 @@ Computational engine: ranger
 \begin{Highlighting}[]
 \CommentTok{# Confusion matrix on full data}
 
-\KeywordTok{tabyl}\NormalTok{(prediction_df, prediction, over_50k)}
+\CommentTok{#tabyl(prediction_df, prediction, over_50k)}
 \end{Highlighting}
 \end{Shaded}
 
-prediction \textless{}=50K \textgreater{}50K \textless{}=50K 21608 2187
-\textgreater{}50K 633 1686
+\hypertarget{saving-the-prediction-dataset}{%
+\section{Saving the prediction
+dataset}\label{saving-the-prediction-dataset}}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -607,5 +607,7 @@ prediction \textless{}=50K \textgreater{}50K \textless{}=50K 21608 2187
 \StringTok{  }\KeywordTok{write_csv}\NormalTok{(}\StringTok{"prediction-dataset.csv"}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
+
+End of analysis
 
 \end{document}
